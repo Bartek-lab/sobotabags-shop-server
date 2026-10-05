@@ -1,0 +1,21 @@
+[project]
+name = "api-shop"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Bartek-lab", email = "bartosz.benedyczak@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "fastapi>=0.142.2",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.15.0",
+    "pyjwt[crypto]>=2.15.1",
+    "python-dotenv>=1.2.4",
+    "stripe>=16.0.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+package = false
