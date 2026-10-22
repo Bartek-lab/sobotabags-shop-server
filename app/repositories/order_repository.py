@@ -122,6 +122,85 @@ async def get_order_summary(conn, order_id: uuid.UUID):
     return await conn.fetchrow("SELECT number, total_amount FROM orders WHERE id = $1", order_id)
 
 
+async def list_orders_for_customer(conn, customer_id: uuid.UUID) -> list:
+    return await conn.fetch(
+        """
+        SELECT o.id, o.number, o.status, o.payment_status, o.total_amount, o.created_at, o.placed_at,
+          (SELECT count(*) FROM order_lines ol WHERE ol.order_id = o.id) AS item_count
+        FROM orders o
+        WHERE o.customer_id = $1 AND o.status IN ('placed', 'completed', 'cancelled')
+        ORDER BY o.created_at DESC
+        """,
+        customer_id,
+    )
+
+
+async def get_order_for_customer(conn, order_id: uuid.UUID, customer_id: uuid.UUID):
+    # Ownership check baked into the query itself -- a mismatched customer_id
+    # returns no row, so the caller 404s instead of ever revealing that an
+    # order id belongs to someone else.
+    return await conn.fetchrow(
+        "SELECT * FROM orders WHERE id = $1 AND customer_id = $2",
+        order_id, customer_id,
+    )
+
+
+async def list_order_lines(conn, order_id: uuid.UUID) -> list:
+    return await conn.fetch(
+        """
+        SELECT ol.product_name, ol.variant_label, ol.sku, ol.quantity,
+          ol.unit_price_amount, ol.total_amount, ma.storage_key AS image_key
+        FROM order_lines ol
+        LEFT JOIN media_assets ma ON ma.id = ol.image_asset_id
+        WHERE ol.order_id = $1
+        ORDER BY ol.created_at
+        """,
+        order_id,
+    )
+
+
+async def get_order_address(conn, order_id: uuid.UUID):
+    return await conn.fetchrow(
+        """
+        SELECT first_name, last_name, line1, line2, city, postal_code, country_code, phone
+        FROM order_addresses WHERE order_id = $1 AND kind = 'shipping'
+        """,
+        order_id,
+    )
+
+
+async def find_withdrawal(conn, order_id: uuid.UUID):
+    return await conn.fetchrow(
+        "SELECT id, status, requested_at FROM order_withdrawals WHERE order_id = $1",
+        order_id,
+    )
+
+
+async def insert_withdrawal(conn, order_id: uuid.UUID, reason: str | None):
+    return await conn.fetchrow(
+        """
+        INSERT INTO order_withdrawals (order_id, reason) VALUES ($1, $2)
+        RETURNING id, status, requested_at
+        """,
+        order_id, reason,
+    )
+
+
+async def mark_order_withdrawn(conn, order_id: uuid.UUID) -> bool:
+    """Only matches a still-'placed' order -- the order may have moved out of
+    that state (e.g. another withdrawal race) between the service's
+    eligibility check and this call."""
+    updated = await conn.fetchval(
+        """
+        UPDATE orders SET status = 'cancelled', cancelled_at = now(), cancel_reason = 'consumer_withdrawal'
+        WHERE id = $1 AND status = 'placed'
+        RETURNING id
+        """,
+        order_id,
+    )
+    return updated is not None
+
+
 async def insert_payment(
     conn, *, order_id: uuid.UUID, provider: str, provider_payment_id: str, method_type: str | None,
     amount: int, card_brand: str | None = None, card_last4: str | None = None,

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      # No test suite exists yet -- this at least catches import-time errors
+      # (bad imports, syntax errors, missing settings) before they reach
+      # Render, the same check this project has relied on manually all
+      # along (`python -c "from app.main import app"`).
+      - run: uv run python -c "from app.main import app"
+        env:
+          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+          SUPABASE_URL: "https://example.supabase.co"
+          CORS_ORIGINS: '["http://localhost:3000"]'
+          STRIPE_SECRET_KEY: "sk_test_ci_placeholder"
+          STRIPE_WEBHOOK_SECRET: "whsec_ci_placeholder"

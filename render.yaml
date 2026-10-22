@@ -1,0 +1,27 @@
+# Render Blueprint -- defines the service's build/start/health-check config
+# in code instead of a hand-filled dashboard form. Secrets (sync: false) are
+# never committed; Render prompts for them once when the Blueprint is first
+# applied, then they're edited in the dashboard from then on.
+#
+# This one service tracks `develop` (the test environment). A production
+# service tracking `main` is a separate, later addition -- not wired yet.
+services:
+  - type: web
+    name: sobotabags-shop-api-test
+    runtime: python
+    plan: free
+    branch: develop
+    buildCommand: "pip install uv && uv sync --frozen"
+    startCommand: "uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

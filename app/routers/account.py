@@ -1,6 +1,10 @@
+"""No service needed: Depends(get_current_customer) already is the entire
+'business logic' of this endpoint."""
+
 from fastapi import APIRouter, Depends
 
-from app.auth import CurrentCustomer, get_current_customer
+from app.auth import get_current_customer
+from app.schemas.customer import CurrentCustomer
 
 router = APIRouter(tags=["account"])
 
