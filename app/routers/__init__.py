@@ -1,4 +1,4 @@
-from app.routers import account, addresses, catalog, checkout, orders, shipping
+from app.routers import account, addresses, catalog, checkout, contact, orders, shipping
 
 ALL_ROUTERS = [
     catalog.router,
@@ -7,4 +7,5 @@ ALL_ROUTERS = [
     orders.router,
     shipping.router,
     checkout.router,
+    contact.router,
 ]

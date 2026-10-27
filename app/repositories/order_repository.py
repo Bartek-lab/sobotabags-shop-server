@@ -145,6 +145,19 @@ async def get_order_for_customer(conn, order_id: uuid.UUID, customer_id: uuid.UU
     )
 
 
+async def get_order_by_id(conn, order_id: uuid.UUID):
+    return await conn.fetchrow("SELECT * FROM orders WHERE id = $1", order_id)
+
+
+async def insert_outbox_email(
+    conn, *, template_id: str, to_email: str, reply_to: str | None, variables: dict
+) -> None:
+    await conn.execute(
+        "INSERT INTO email_outbox (template_id, to_email, reply_to, variables) VALUES ($1, $2, $3, $4)",
+        template_id, to_email, reply_to, variables,
+    )
+
+
 async def list_order_lines(conn, order_id: uuid.UUID) -> list:
     return await conn.fetch(
         """

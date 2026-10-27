@@ -25,7 +25,7 @@ from fastapi import HTTPException, status
 from app.repositories import order_repository, pricing_repository, promotion_repository
 from app.schemas.checkout import CheckoutSessionIn
 from app.schemas.customer import CurrentCustomer
-from app.services import gift_card_service, pricing_service
+from app.services import gift_card_service, order_email_service, pricing_service
 from app.services.stripe_service import retrieve_payment_method_details
 
 LOCALE = "pl"
@@ -125,6 +125,7 @@ async def finalize_zero_dollar_order(conn, order_id: uuid.UUID) -> None:
     if not placed:
         return
     await gift_card_service.record_payment_if_redeemed(conn, order_id)
+    await order_email_service.queue_order_confirmation_emails(conn, order_id)
 
 
 async def mark_order_paid(conn, order_id: uuid.UUID, session: dict[str, Any]) -> bool:
@@ -148,4 +149,5 @@ async def mark_order_paid(conn, order_id: uuid.UUID, session: dict[str, Any]) ->
         method_type=details["method_type"], amount=details["amount"],
         card_brand=details["card_brand"], card_last4=details["card_last4"],
     )
+    await order_email_service.queue_order_confirmation_emails(conn, order_id)
     return True

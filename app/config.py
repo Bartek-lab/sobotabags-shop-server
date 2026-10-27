@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
     stripe_secret_key: str
     stripe_webhook_secret: str
+    resend_api_key: str
 
     @property
     def supabase_jwks_url(self) -> str:
