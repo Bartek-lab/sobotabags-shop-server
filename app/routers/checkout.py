@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.auth import get_current_customer_optional
 from app.db import pool
+from app.rate_limit import limiter
 from app.repositories import order_repository
 from app.schemas.checkout import (
     CheckoutSessionIn,
@@ -23,8 +24,11 @@ router = APIRouter(tags=["checkout"])
 
 
 @router.post("/checkout/preview", response_model=PricingPreviewOut)
+@limiter.limit("30/minute")
 async def preview_checkout(
-    body: PricingPreviewIn, customer: CurrentCustomer | None = Depends(get_current_customer_optional)
+    request: Request,
+    body: PricingPreviewIn,
+    customer: CurrentCustomer | None = Depends(get_current_customer_optional),
 ):
     if not body.items:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "cart is empty")
@@ -44,7 +48,9 @@ async def preview_checkout(
 
 
 @router.post("/checkout/session", response_model=CheckoutSessionOut)
+@limiter.limit("10/minute")
 async def create_checkout_session(
+    request: Request,
     body: CheckoutSessionIn,
     customer: CurrentCustomer | None = Depends(get_current_customer_optional),
 ):

@@ -17,7 +17,7 @@ from app.config import settings
 
 resend.api_key = settings.resend_api_key
 
-FROM_ADDRESS = "KS <onboarding@resend.dev>"
+FROM_ADDRESS = "KS <shop@sobotabags.com>"
 
 
 def send_template(
