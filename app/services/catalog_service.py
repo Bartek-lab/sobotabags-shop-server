@@ -41,19 +41,16 @@ def _to_list_item(r) -> ProductListItem:
 
 
 async def list_products(
-    *, category: str | None, sort: str, start: int, end: int
+    *, category: str | None, bestseller: bool, sort: str, start: int, end: int
 ) -> tuple[list[ProductListItem], int]:
-    # "featured" from the UI's SortOption type isn't backed by any column in
-    # this schema (no is_featured flag exists) -- newest is the honest
-    # default rather than inventing a fake signal to sort by.
     order_sql = _SORT_SQL[sort]
     limit, offset = max(end - start, 0), start
 
     conn = pool()
     rows = await catalog_repository.list_products(
-        conn, category=category, order_sql=order_sql, limit=limit, offset=offset
+        conn, category=category, bestseller=bestseller, order_sql=order_sql, limit=limit, offset=offset
     )
-    total = await catalog_repository.count_products(conn, category=category)
+    total = await catalog_repository.count_products(conn, category=category, bestseller=bestseller)
     return [_to_list_item(r) for r in rows], total
 
 

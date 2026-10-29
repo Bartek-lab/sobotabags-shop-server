@@ -23,7 +23,18 @@ async def list_categories(conn) -> list:
     )
 
 
-async def list_products(conn, *, category: str | None, order_sql: str, limit: int, offset: int) -> list:
+_BESTSELLER_SQL = """
+  AND p.id IN (
+    SELECT pav.product_id FROM product_attribute_values pav
+    JOIN attributes a ON a.id = pav.attribute_id
+    WHERE a.code = 'bestseller' AND pav.value_boolean
+  )
+"""
+
+
+async def list_products(
+    conn, *, category: str | None, bestseller: bool, order_sql: str, limit: int, offset: int
+) -> list:
     # The list query and the count query reference different numbers of
     # placeholders (count never needs $2/currency), so each gets its own
     # category clause with its own correctly-numbered placeholder -- sharing
@@ -40,6 +51,7 @@ async def list_products(conn, *, category: str | None, order_sql: str, limit: in
             WHERE ct.slug = $3
           )
         """
+    bestseller_sql = _BESTSELLER_SQL if bestseller else ""
     params: list[Any] = [LOCALE, CURRENCY, *([category] if category else []), limit, offset]
     query = f"""
         SELECT p.id, pt.slug, pt.name, pt.short_description,
@@ -59,14 +71,14 @@ async def list_products(conn, *, category: str | None, order_sql: str, limit: in
            WHERE pc2.product_id = p.id ORDER BY pc2.is_primary DESC LIMIT 1) AS category_name
         FROM products p
         JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = $1
-        WHERE p.status = 'active' {list_category_sql}
+        WHERE p.status = 'active' {list_category_sql} {bestseller_sql}
         ORDER BY {order_sql}
         LIMIT ${len(params) - 1} OFFSET ${len(params)}
     """
     return await conn.fetch(query, *params)
 
 
-async def count_products(conn, *, category: str | None) -> int:
+async def count_products(conn, *, category: str | None, bestseller: bool) -> int:
     count_category_sql = ""
     if category:
         count_category_sql = """
@@ -77,11 +89,12 @@ async def count_products(conn, *, category: str | None) -> int:
             WHERE ct.slug = $2
           )
         """
+    bestseller_sql = _BESTSELLER_SQL if bestseller else ""
     params: list[Any] = [LOCALE, *([category] if category else [])]
     query = f"""
         SELECT count(*) FROM products p
         JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = $1
-        WHERE p.status = 'active' {count_category_sql}
+        WHERE p.status = 'active' {count_category_sql} {bestseller_sql}
     """
     return await conn.fetchval(query, *params)
 

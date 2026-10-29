@@ -21,11 +21,14 @@ async def list_categories():
 async def list_products(
     response: Response,
     category: str | None = Query(None, description="category slug"),
+    bestseller: bool = Query(False),
     sort: str = Query("newest", pattern="^(newest|price-asc|price-desc)$"),
     start: int = Query(0, ge=0),
     end: int = Query(24, ge=1),
 ):
-    items, total = await catalog_service.list_products(category=category, sort=sort, start=start, end=end)
+    items, total = await catalog_service.list_products(
+        category=category, bestseller=bestseller, sort=sort, start=start, end=end
+    )
     response.headers["X-Total-Count"] = str(total)
     return items
 
